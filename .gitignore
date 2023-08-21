@@ -1,0 +1,29 @@
+# Cargo generated
+/target/
+
+# Nix generated
+/result*
+/scripts/tmp.toml
+
+# direnv generated
+.direnv/
+
+# wasm-pack
+/pkg/
+
+# rustfmt Backup file
+**/*.rs.bk
+
+/node_modules
+/lsp/vscode-extension/node_modules
+/lsp/vscode-extension/out
+
+# Ctags output
+/tags
+
+# pre-commit-hooks
+/.pre-commit-config.yaml
+
+# Python virtual env
+.venv/
+venv/

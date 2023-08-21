@@ -1,92 +1,278 @@
-# Nickel Test
+# Nickel
 
+[![Continuous integration](https://github.com/tweag/nickel/workflows/Continuous%20integration/badge.svg)](https://github.com/tweag/nickel/actions?query=branch%3Amaster)
+[![Website](https://img.shields.io/website-up-down-green-red/http/cv.lbesson.qc.to.svg)](https://nickel-lang.org)
 
+Nickel is the cheap configuration language.
+
+Its purpose is to automate the generation of static configuration files - think
+JSON, YAML, XML, or your favorite data representation language - that are then
+fed to another system. It is designed to have a simple, well-understood core: it
+is in essence JSON with functions.
+
+Nickel's salient traits are:
+
+- **Lightweight**: Nickel is easy to embed. An interpreter should be simple to
+    implement. The reference interpreter can be called from many programming
+    languages.
+- **Composable code**: the basic building blocks for computing are functions.
+    They are first-class citizens, which can be passed around, called and
+    composed.
+- **Composable data**: the basic building blocks for data are records
+    (called *objects* in JSON). In Nickel, records can be merged at will,
+    including associated metadata (documentation, default values, type
+    contracts, etc).
+- **Typed, but only when it helps**: static types improve code quality, serve as
+    documentation and eliminate bugs early. But application-specific
+    self-contained code will always evaluate to the same value, so type errors
+    will show up at runtime anyway. Some JSON is hard to type. There, types are
+    only a burden. Whereas reusable code - that is, *functions* - is evaluated
+    on potentially infinitely many different inputs, and is impossible to test
+    exhaustively. There, types are precious. Nickel has types, but you get to
+    choose when you want it or not, and it handles safely the interaction between
+    the typed and the untyped world.
+- **Design by contract**: complementary to the type system, contracts are
+    a principled approach to checking assertions. The interpreter automatically
+    inserts assertions at the boundary between typed and untyped code. Nickel
+    lets users add arbitrary assertions of their own and easily understand why
+    when assertions fail.
+
+The motto guiding Nickel's design is:
+> Great defaults, design for extensibility
+
+There should be a standard, clear path for common things. There should be no
+arbitrary restrictions that limit what you can do you the one day you need to go
+beyond.
+
+## Use cases
+
+Nickel is a good fit in any situation where you need to generate a complex
+configuration, be it for a single app, a machine, whole infrastructure, or a
+build system.
+
+The motivating use cases are in particular:
+
+- The [Nix package manager](https://nixos.org/): Nix is a declarative package
+    manager using its own language for specifying packages. Nickel is an
+    evolution of the Nix language, while trying to overcome some of its
+    limitations.
+- Infrastructure as code: infrastructure is becoming increasingly complex,
+    requiring a rigorous approach to deployment, modification and configuration.
+    This is where a declarative approach also shines, as adopted by
+    [Terraform](https://www.terraform.io/),
+    [NixOps](https://github.com/NixOS/nixops) or
+    [Kubernetes](https://kubernetes.io/), all requiring potentially complex
+    generation of configuration.
+- Build systems: build systems (like [Bazel](https://bazel.build/)) need
+    a specification of the dependency graph.
+
+Most aforementioned projects have their own bespoke configuration language. See
+[Comparison](#comparison). In
+general, application-specific languages might suffer from feature creep, lack of
+abstractions or just feel ad hoc. Nickel buys you more for less.
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Please follow the getting started guide for Nickel users on the [nickel-lang
+website](https://nickel-lang.org/getting-started). The instructions below are
+either reproduced for this document to be self-contained or because
+they are aimed toward hacking on the Nickel interpreter itself (e.g. building
+the `nickel-lang-core` crate documentation).
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Run
 
-## Add your files
+1. Get a Nickel binary:
+   - With [flake-enabled](https://nixos.wiki/wiki/Flakes) Nix, run
+     Nickel directly with `nix run github:tweag/nickel`. You can use [our binary
+     cache](https://tweag-nickel.cachix.org/) to prevent rebuilding a lot of
+     packages. Pass arguments to Nickel with an extra `--` as in `nix run
+     github:tweag/nickel -- repl`,
+   - Again with flake-enabled Nix, you can install Nickel in your profile with
+     `nix profile add github:tweag/nickel`. The `nickel` command is then in your
+     `$PATH` and is available anywhere.
+   - If you're running macOS you can use Homebrew to install the Nickel binary
+     with `brew install nickel`.
+   - Without Nix, you can use `cargo run` after [building](#build), passing
+     arguments with an extra `--` as in `cargo run --bin nickel -- -f program.ncl`.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+2. Run your first program:
 
+    ```console
+    $ nickel <<< 'let x = 2 in x + x'
+    4
+    ```
+
+    Or load it from a file:
+
+    ```console
+    $ echo 'let s = "world" in "Hello, " ++ s' > program.ncl
+    $ nickel -f program.ncl
+    "Hello, world"
+    ```
+
+3. Start a REPL:
+
+    ```console
+    $ nickel repl
+    nickel> let x = 2 in x + x
+    4
+
+    nickel>
+    ```
+
+    Use `:help` for a list of available commands.
+4. Export your configuration to JSON, YAML or TOML:
+
+  ```console
+  $ nickel export --format json <<< '{foo = "Hello, world!"}'
+  {
+    "foo": "Hello, world!"
+  }
+  ```
+
+Use `nickel help` for a list of subcommands, and `nickel help <subcommand>`
+for help about a specific subcommand.
+
+#### Editor Setup
+
+Nickel has syntax highlighting plugins for Vim/Neovim, and VSCode. In-editor
+diagnostics, type hints, and auto-completion are provided by the Nickel Language
+Server. Please follow
+[the LSP guide](https://github.com/tweag/nickel/tree/master/lsp) to set up syntax
+highlighting and NLS.
+
+#### Formatting
+
+You can format Nickel source code using [Topiary](https://github.com/tweag/topiary/):
+
+```console
+topiary -i -f my-config.ncl
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/szlend/nickel-test.git
-git branch -M main
-git push -uf origin main
+
+Please follow the Formatting Capabilities section of the [LSP
+documentation](https://github.com/tweag/nickel/tree/master/lsp) to know how to
+hook up the Nickel LSP and topiary in order to enable formatting inside your
+code editor.
+
+### Build
+
+[rust-guide]: https://doc.rust-lang.org/cargo/getting-started/installation.html
+
+1. Download build dependencies:
+
+   - **With Nix**: If you have [Nix](https://nixos.org/nix) installed:
+
+     ```console
+     nix-shell
+     nix develop # if you use Nix Flakes
+     ```
+
+     You will be dropped in a shell, ready to build. You can use
+     [our binary cache](https://tweag-nickel.cachix.org/) to prevent rebuilding
+     a lot of packages.
+   - **Without Nix**: otherwise, follow [this guide][rust-guide] to install Rust
+     and Cargo first.
+
+1. Build Nickel:
+
+   ```console
+   cargo build --release
+   ```
+
+   And voilà! Generated files are placed in `target/release`.
+
+### Test
+
+Run tests with
+
+```console
+cargo test
 ```
 
-## Integrate with your tools
+### Documentation
 
-- [ ] [Set up project integrations](https://gitlab.com/szlend/nickel-test/-/settings/integrations)
+The user manual is available [on the nickel-lang.org
+website](https://nickel-lang.org/user-manual/introduction), and in this
+repository as a collection of Markdown files in `doc/manual`.
 
-## Collaborate with your team
+To get the documentation of the `nickel-lang` codebase itself:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+1. Build the doc:
 
-## Test and Deploy
+    ```console
+    cargo doc --no-deps
+    ```
 
-Use the built-in continuous integration in GitLab.
+2. Open the file `target/doc/nickel/index.html` in your browser.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Examples
 
-***
+You can find examples in the [`./examples`](./examples) directory.
 
-# Editing this README
+## Current state and roadmap
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Nickel is currently released in version `1.0`. We expect the core design of the
+language to be stable and the language to be useful for real-world applications.
+The next steps we plan to work on are:
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- Nix integration: being able to seamlessly use Nickel to write packages and
+  shells ([nickel-nix](https://github.com/nickel-lang/nickel-nix))
+- Custom merge functions (second part of the
+  [overriding
+  proposal](https://github.com/tweag/nickel/blob/9fd6e436c0db8f101d4eb26cf97c4993357a7c38/rfcs/001-overriding.md))
+- Incremental evaluation: design an incremental evaluation model and a caching
+  mechanism in order to perform fast re-evaluation upon small changes to a
+  configuration.
+- Performance improvements
 
-## Name
-Choose a self-explaining name for your project.
+## Comparison
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- [CUE](https://cuelang.org/) is a configuration language with a focus on data
+    validation. It introduces a new constraint system backed by a solid theory
+    which ensures strong guarantees about your code. It allows for very elegant
+    schema specifications. In return, the cost to pay is to abandon functions
+    and
+    [Turing-completeness](https://en.wikipedia.org/wiki/Turing_completeness).
+    Nickel's merge system is inspired by the one of CUE, even if since Nickel
+    does have general functions and is Turing-complete, they are necessarily
+    different.
+- [Nix](https://nixos.org/): The Nix language, or *Nix expressions*, is one of
+    the main inspirations for Nickel. It is a very simple yet powerful lazy
+    functional language. We strive to retain this simplicity, while adding
+    typing capabilities, modularity, and detaching the language from the Nix
+    package manager.
+- [Dhall](https://dhall-lang.org/) is a statically typed configuration language.
+    It is also inspired by Nix, to which it adds a powerful static type system.
+    However, this forces the programmer to annotate all of their code with types.
+- [Jsonnet](https://jsonnet.org/) is another language which could be dubbed as
+    "JSON with functions" (and others things as well). It is a lazy functional
+    language with object-oriented features, among which inheritance is similar
+    to Nickel's merge system. One big difference with Nickel is the absence of
+    typing.
+- [Pulumi](https://www.pulumi.com/) is not a language in itself, but a cloud
+    tool (like Terraform) where you can use your preferred language for
+    describing your infrastructure. This is a different approach to the problem,
+    with different trade-offs.
+- [Starlark](https://docs.bazel.build/versions/master/skylark/language.html) is
+    the language of [Bazel](https://bazel.build/), which is a dialect of
+    [Python](https://www.python.org/). It does not have types and recursion is
+    forbidden, making it not Turing-complete.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+See [RATIONALE.md](./RATIONALE.md) for the design rationale and a more detailed
+comparison with these languages.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Comparison with other configuration languages
+<!-- Intentionally duplicated in `RATIONALE.md`, please update the other one for
+any change done here -->
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+| Language | Typing                        | Recursion  | Evaluation | Side-effects                                     |
+|----------|-------------------------------|------------|------------|--------------------------------------------------|
+| Nickel   | Gradual (dynamic + static)    | Yes        | Lazy       | Yes (constrained, planned)                       |
+| Starlark | Dynamic                       | No         | Strict     | No                                               |
+| Nix      | Dynamic                       | Yes        | Lazy       | Predefined and specialized to package management |
+| Dhall    | Static (requires annotations) | Restricted | Lazy       | No                                               |
+| CUE      | Static (everything is a type) | No         | Lazy       | No, but allowed in the separated scripting layer |
+| Jsonnet  | Dynamic                       | Yes        | Lazy       | No                                               |
+| JSON     | None                          | No         | Strict     | No                                               |
+| YAML     | None                          | No         | N/A        | No                                               |
+| TOML     | None                          | No         | N/A        | No                                               |

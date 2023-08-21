@@ -1,0 +1,47 @@
+[package]
+name = "nickel-lang-lsp"
+readme = "README.md"
+description = "NLS: A language server for the Nickel configuration language."
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "nls"
+path = "src/main.rs"
+
+[build-dependencies]
+lalrpop.workspace = true
+
+[dependencies]
+lalrpop-util.workspace = true
+clap = { workspace = true, features = ["derive"] }
+codespan.workspace = true
+codespan-reporting.workspace = true
+codespan-lsp.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+regex.workspace = true
+
+nickel-lang-core.workspace = true
+lsp-server.workspace = true
+lsp-types.workspace = true
+log.workspace = true
+env_logger.workspace = true
+anyhow.workspace = true
+derive_more.workspace = true
+lazy_static.workspace = true
+csv.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+assert_matches.workspace = true
+insta.workspace = true
+lsp-harness.workspace = true
+nickel-lang-utils.workspace = true
+pretty_assertions.workspace = true
+test-generator.workspace = true
