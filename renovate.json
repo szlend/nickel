@@ -1,0 +1,9 @@
+{
+    "extends": [
+        "config:recommended"
+    ],
+    "enabledManagers": [
+        "cargo"
+    ],
+    "rangeStrategy": "in-range-only"
+}
