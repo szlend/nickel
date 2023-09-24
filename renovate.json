@@ -8,10 +8,12 @@
     "enabledManagers": [
         "cargo"
     ],
-    "rangeStrategy": "in-range-only",
+    "rangeStrategy": "update-lockfile",
     "packageRules": [
         {
-            "matchManagers": ["cargo"],
+            "matchManagers": [
+                "cargo"
+            ],
             "groupName": "cargo packages"
         }
     ]
